@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>这一月，我没有放弃</title>
+    <style>
+        /* --- 1. 基础样式与重置 --- */
+        :root {
+            --bg: #050507;
+            --card: #1c1c1e;
+            --primary: #0A84FF; /* iOS Blue */
+            --accent: #BF5AF2;  /* iOS Purple */
+            --gold: #FFD60A;
+            --text: #FFFFFF;
+            --text-sec: #8E8E93;
+            --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 移动端容器模拟 */
+        #app {
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at top right, #1a1a3a 0%, transparent 50%),
+                        radial-gradient(circle at bottom left, #1a0f0a 0%, transparent 50%);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* --- 2. 页面切换系统 --- */
+        .page {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            padding: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95) translateY(20px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1;
+        }
+
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+            z-index: 10;
+        }
+
+        /* --- 3. 组件样式 --- */
+        
+        /* 按钮 */
+        .btn-main {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none; color: #fff;
+            padding: 18px 0; width: 100%;
+            border-radius: 30px;
+            font-size: 18px; font-weight: 600;
+            box-shadow: 0 10px 20px rgba(10, 132, 255, 0.3);
+            margin-top: auto; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn-main:active { transform: scale(0.98); }
+
+        /* 启动页 */
+        .intro-visual {
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center;
+        }
+        .particles {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1;
+            background-image: radial-gradient(#ffffff 1px, transparent 1px);
+            background-size: 30px 30px; opacity: 0.1;
+        }
+        .title-large { font-size: 32px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; }
+        .subtitle { font-size: 16px; color: var(--text-sec); line-height: 1.5; opacity: 0.8; }
+
+        /* 用户选择页 */
+        .user-scroll {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            overflow-y: auto; padding-bottom: 80px; margin-top: 20px;
+        }
+        .user-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 20px 15px;
+            text-align: center; border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s; cursor: pointer;
+        }
+        .user-card:active { background: rgba(255,255,255,0.15); }
+        .u-avatar { font-size: 40px; margin-bottom: 10px; display: block; }
+        .u-name { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
+        .u-label { font-size: 10px; color: var(--primary); background: rgba(10, 132, 255, 0.15); padding: 2px 6px; border-radius: 4px; }
+
+        /* 数据概览页 */
+        .data-hero { text-align: center; margin: 30px 0; }
+        .hero-num { font-size: 64px; font-weight: 800; background: -webkit-linear-gradient(#fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-label { font-size: 14px; color: var(--text-sec); letter-spacing: 2px; text-transform: uppercase; }
+        .stat-grid { display: flex; justify-content: space-around; margin-bottom: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+        .stat-item div:first-child { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+        .stat-item div:last-child { font-size: 12px; color: var(--text-sec); }
+
+        /* 时间轴页 */
+        .timeline-container { flex: 1; overflow-y: auto; margin-top: 10px; padding-right: 5px; }
+        .t-node { display: flex; margin-bottom: 25px; opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s forwards; }
+        .t-date { width: 50px; font-size: 12px; color: var(--text-sec); text-align: right; padding-top: 4px; font-family: monospace; }
+        .t-line-box { width: 30px; position: relative; display: flex; justify-content: center; }
+        .t-line { width: 2px; background: rgba(255,255,255,0.1); height: 100%; position: absolute; top: 10px; }
+        .t-dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; z-index: 2; margin-top: 6px; box-shadow: 0 0 10px var(--primary); }
+        .t-content { flex: 1; background: var(--card); padding: 15px; border-radius: 12px; position: relative; }
+        .t-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; vertical-align: middle; }
+        .tag-sport { background: rgba(255, 59, 48, 0.2); color: #ff3b30; }
+        .tag-study { background: rgba(48, 209, 88, 0.2); color: #30d158; }
+        .t-text { font-size: 14px; line-height: 1.4; margin-top: 5px; display: block;}
+        .t-dur { position: absolute; top: 12px; right: 12px; font-size: 12px; font-weight: 700; color: var(--text-sec); }
+        .badge-high { position: absolute; top: -10px; right: -5px; font-size: 20px; transform: rotate(15deg); }
+
+        /* 结果海报页 */
+        .poster-frame {
+            background: #fff; color: #000; border-radius: 20px; padding: 30px 20px;
+            margin: 20px 0; transform: rotate(-1deg);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+            animation: float 6s ease-in-out infinite;
+        }
+        .keyword-stamp {
+            font-size: 42px; font-weight: 900; color: var(--accent);
+            border: 4px solid var(--accent); display: inline-block;
+            padding: 5px 15px; transform: rotate(-5deg); margin: 15px 0;
+            opacity: 0.8;
+        }
+
+        /* 动画 Keyframes */
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: rotate(-1deg) translateY(0); } 50% { transform: rotate(-1deg) translateY(-10px); } }
+        
+        /* 辅助类 */
+        .hidden { display: none; }
+        .nav-bar { display: flex; gap: 10px; width: 100%; padding-bottom: 20px; }
+        .btn-sub { flex: 1; background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 15px; border-radius: 20px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- 页面 1: 启动页 -->
+    <div class="page active" id="p1">
+        <div class="particles"></div>
+        <div class="intro-visual">
+            <div style="font-size:60px; margin-bottom:20px; text-shadow: 0 0 30px rgba(10,132,255,0.6);">⏳</div>
+            <div class="title-large">自律时光机</div>
+            <p class="subtitle">有人选择放纵，有人选择坚持。<br>这不是数据，这是与自己对话的30天。</p>
+        </div>
+        <button class="btn-main" onclick="router.go('p2')">启动时光机</button>
+    </div>
+
+    <!-- 页面 2: 人物选择 -->
+    <div class="page" id="p2">
+        <div class="title-large" style="font-size: 24px;">确认你的身份</div>
+        <p class="subtitle">系统识别到 5 位坚持者的频率信号</p>
+        <div class="user-scroll" id="userListContainer">
+            <!-- JS 动态生成用户卡片 -->
+        </div>
+    </div>
+
+    <!-- 页面 3: 仪表盘 -->
+    <div class="page" id="p3">
+        <div style="text-align: center; margin-top: 20px;">
+            <div id="dashAvatar" style="font-size: 50px; margin-bottom: 10px;"></div>
+            <h2 id="dashName">User</h2>
+        </div>
+        
+        <div class="data-hero">
+            <div class="hero-label">11月累计投入</div>
+            <div class="hero-num" id="dashTotalTime">0</div>
+            <div class="hero-label">分钟</div>
+        </div>
+
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div id="dashDays">0</div>
+                <div>坚持天数</div>
+            </div>
+            <div class="stat-item">
+                <div id="dashStreak">0</div>
+                <div>最长连打</div>
+            </div>
+            <div class="stat-item">
+                <div id="dashType">学习</div>
+                <div>核心领域</div>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+            <p id="dashQuote" style="margin:0; font-size:14px; line-height:1.5; color:#ccc; font-style: italic;">
+                "文案加载中..."
+            </p>
+        </div>
+
+        <div class="nav-bar" style="margin-top:auto">
+            <button class="btn-sub" onclick="router.back()">返回</button>
+            <button class="btn-main" style="flex:2; margin-top:0" onclick="router.go('p4')">查看足迹</button>
+        </div>
+    </div>
+
+    <!-- 页面 4: 时间轴 -->
+    <div class="page" id="p4">
+        <div class="title-large" style="font-size: 24px;">坚持回放</div>
+        <p class="subtitle">每一条记录，都是你留下的脚印</p>
+        
+        <div class="timeline-container" id="timelineList">
+            <!-- JS 动态生成时间轴 -->
+        </div>
+
+        <div class="nav-bar" style="padding-top: 15px;">
+            <button class="btn-sub" onclick="router.back()">概览</button>
+            <button class="btn-main" style="flex:2; margin-top:0" onclick="router.go('p5')">生成总结</button>
+        </div>
+    </div>
+
+    <!-- 页面 5: 结果海报 -->
+    <div class="page" id="p5">
+        <div style="flex:1; display: flex; align-items: center; justify-content: center;">
+            <div class="poster-frame">
+                <div style="font-size: 12px; color: #666; letter-spacing: 2px; margin-bottom: 10px;">NOVEMBER 2025 REPORT</div>
+                <div id="posterAvatar" style="font-size: 60px; margin-bottom: 10px;"></div>
+                <h2 style="margin:0"><span id="posterName">User</span> 的自律档案</h2>
+                
+                <div class="keyword-stamp" id="posterKeyword">自律王者</div>
+                
+                <p id="posterDesc" style="font-size: 14px; color: #444; line-height: 1.6; margin: 20px 0; text-align: justify;">
+                    描述文案...
+                </p>
+
+                <div style="border-top: 1px dashed #ccc; padding-top: 15px; display: flex; justify-content: space-between;">
+                    <div style="text-align: left;">
+                        <div style="font-size: 12px; color: #888;">总时长</div>
+                        <div style="font-weight: 800; font-size: 18px;"><span id="posterTime">0</span>h</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 12px; color: #888;">高光时刻</div>
+                        <div style="font-weight: 800; font-size: 18px;" id="posterHighlight">0m</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; background: #000; color: #fff; padding: 10px; font-size: 12px; border-radius: 8px;">
+                    《这一月，我没有放弃》
+                </div>
+            </div>
+        </div>
+        <button class="btn-main" onclick="location.reload()">再次启动时光机</button>
+    </div>
+</div>
+
+<script>
+    // ========================================
+    // 1. 数据库构建 (基于 "每日自律打卡.csv")
+    // ========================================
+    const rawData = [
+        // 格式: [日期, 提交者, 类型, 时长(分), 内容]
+        // Data from your table
+        ["11-01", "，，，，", "运动", 74, "篮球运动"],
+        ["11-01", "Nice", "运动", 50, "打篮球赛"],
+        ["11-02", "，，，，", "运动", 548, "爬大南山 (极限挑战)"],
+        ["11-02", "Nice", "运动", 548, "征服大南山"],
+        ["11-02", "。", "运动", 548, "征服大南山"],
+        ["11-03", "尤克李李", "学习", 90, "微信阅读"],
+        ["11-03", "，，，，", "运动", 68, "篮球运动"],
+        ["11-03", "，，，，", "学习", 60, "阅读余华第七天"],
+        ["11-03", "Nice", "学习", 60, "病碎隙笔"],
+        ["11-03", "。", "学习", 60, "晚熟的人"],
+        ["11-03", "wuxx", "学习", 100, "阅读 100m，英语 5m"],
+        ["11-03", "wuxx", "运动", 20, "足弓训练 20m"], // Corrected date based on data
+        ["11-04", "，，，，", "运动", 79, "篮球运动"],
+        ["11-04", "尤克李李", "学习", 10, "学习英语多邻国"],
+        ["11-05", "，，，，", "运动", 107, "篮球运动"],
+        ["11-06", "，，，，", "运动", 37, "篮球运动"],
+        ["11-06", "尤克李李", "学习", 130, "微信阅读"],
+        ["11-07", "，，，，", "运动", 57, "骑行运动"],
+        ["11-07", "尤克李李", "运动", 20, "楼下散步"],
+        ["11-07", "。", "运动", 120, "滑板运动"], // Original date in table was 12/7, corrected to 11/7
+        ["11-08", "，，，，", "运动", 223, "拿下梧桐山"],
+        ["11-09", "Nice", "学习", 60, "病隙随笔"],
+        ["11-09", "尤克李李", "运动", 30, "楼下散步"], // Date was 11/8 in data, but appears to be 11/9 activity from filename
+        ["11-09", "尤克李李", "运动", 40, "家里散步"], // Date was 11/8 in data, but appears to be 11/9 activity from filename
+        ["11-09", "，，，，", "运动", 74, "篮球运动"],
+        ["11-09", "Nice", "运动", 74, "篮球比赛"],
+        ["11-09", "尤克李李", "学习", 52, "微信阅读"],
+        ["11-05", "wuxx", "学习", 35, "阅读30，英文5m"], // Corrected date based on data
+        ["11-06", "wuxx", "学习", 5, "英文5m"],
+        ["11-06", "wuxx", "学习", 5, "英文5m"],
+        ["11-07", "wuxx", "学习", 5, "英文5m"],
+        ["11-08", "wuxx", "学习", 5, "英文5m"],
+        ["11-09", "wuxx", "学习", 5, "英文5m"],
+        ["11-10", "，，，，", "运动", 62, "篮球运动"],
+        ["11-10", "Nice", "运动", 60, "篮球比赛"],
+        ["11-10", "尤克李李", "运动", 26, "楼下散步"], // Date was 11/10 in table, but filename suggests 11/11
+        ["11-11", "尤克李李", "运动", 30, "小区楼下散步"],
+        ["11-11", "。", "运动", 79, "健身锻炼"],
+        ["11-09", "。", "运动", 61, "健身锻炼"], // Date was 11/9 in table, but filename suggests 11/11
+        ["11-11", "，，，，", "运动", 130, "篮球运动"],
+        ["11-11", "Nice", "运动", 60, "篮球比赛（小区）"],
+        ["11-12", "，，，，", "学习", 30, "阅读第七天"],
+        ["11-12", "。", "学习", 30, "晚熟的人"],
+        ["11-10", "wuxx", "学习", 5, "英语5m"],
+        ["11-10", "wuxx", "运动", 30, "康复训练30m"],
+        ["11-11", "wuxx", "学习", 5, "英语5m"],
+        ["11-11", "wuxx", "运动", 30, "康复运动30m"],
+        ["11-12", "wuxx", "学习", 30, "阅读25m，英语5m"],
+        ["11-12", "wuxx", "运动", 30, "散步1w步"],
+        ["11-13", "wuxx", "学习", 5, "英语5m"],
+        ["11-13", "。", "运动", 90, "健身训练"],
+        ["11-13", "wuxx", "学习", 88, "阅读 83m，英语 5m"],
+        ["11-14", "wuxx", "学习", 30, "阅读 20，英语 10"], // Date was 11/14 in table, but filename suggests 11/15
+        ["11-15", "，，，，", "学习", 270, "学习ps"],
+        ["11-15", "尤克李李", "学习", 840, "微信阅读福格行为模型"],
+        ["11-15", "wuxx", "学习", 280, "阅读 154m，英语 6m，LLM 的降噪学习"],
+        ["11-16", "Nice", "学习", 30, "文化苦旅两章"],
+        ["11-16", "，，，，", "学习", 189, "学习ps"],
+        ["11-16", "Nice", "学习", 60, "文化苦旅阅读"],
+        ["11-16", "wuxx", "学习", 87, "剑桥中国史 77m，英语 10m"],
+        ["11-18", "尤克李李", "学习", 90, "微信阅读"],
+        ["11-18", "尤克李李", "学习", 10, "学英语多邻国"],
+        ["11-17", "wuxx", "学习", 21, "剑桥中国史 13m，英文 8m"], // Date was 11/17 in table, but filename suggests 11/18
+        ["11-18", "wuxx", "学习", 42, "西方哲学史阅读 34m，英语 8m"], // Date was 11/18 in table, but filename suggests 11/19
+        ["11-19", "Nice", "学习", 20, "小区散步"],
+        ["11-19", "。", "运动", 22, "闲庭信步"],
+        ["11-19", "wuxx", "运动", 43, "瑜伽 29m，无氧 14m"],
+        ["11-19", "wuxx", "学习", 46, "英文 10m，西方哲学史 36m"],
+        ["11-20", "wuxx", "学习", 37, "西方哲学史阅读 25m，英语 12m"], // Date was 11/20 in table, but filename suggests 11/21
+        ["11-21", "wuxx", "学习", 5, "英语5m"],
+        ["11-22", "wuxx", "学习", 120, "西方哲学史60m人类简史55m英语5m"],
+        ["11-22", "，，，，", "学习", 174, "学习ps"], // Date was 11/22 in table, but filename suggests 11/23
+        ["11-23", "尤克李李", "学习", 320, "微信阅读"],
+        ["11-23", "wuxx", "运动", 40, "28m 燃脂运动，12m 足弓训练"],
+        ["11-23", "wuxx", "学习", 176, "166m 人类简史，10m 英语"]
+    ];
+
+    // 用户配置表
+    const userProfiles = {
+        "，，，，": { avatar: "🏔️", label: "潜能探索家", quote: "要么不做，要么做到极致。548分钟的爬山是你意志的丰碑。" },
+        "Nice": { avatar: "🏀", label: "文武双全", quote: "动静皆宜。球场上的汗水与《文化苦旅》的沉思，构成了完整的你。" },
+        "尤克李李": { avatar: "📖", label: "灵魂漫步者", quote: "在余华的文字里流泪，在楼下的街道散步，松弛感是你的武器。" },
+        "wuxx": { avatar: "⚡", label: "复利魔法师", quote: "5分钟的微习惯也能聚沙成塔。从哲学到LLM，你的求知欲没有边界。" },
+        "。": { avatar: "🛹", label: "自由追风人", quote: "滑板与深夜。你的自律不循规蹈矩，而是对自由的无限向往。" }
+    };
+
+    // --- 数据处理逻辑 ---
+    let processedData = {};
+
+    rawData.forEach(row => {
+        const [date, user, type, duration, content] = row;
+        if (!processedData[user]) {
+            processedData[user] = {
+                name: user,
+                records: [],
+                totalMin: 0,
+                days: new Set(),
+                types: {},
+                maxDuration: 0,
+                highlightContent: ""
+            };
+        }
+        
+        const u = processedData[user];
+        u.records.push({ date, type, duration, content });
+        u.totalMin += duration;
+        u.days.add(date);
+        u.types[type] = (u.types[type] || 0) + duration;
+        
+        // 计算高光时刻
+        if (duration > u.maxDuration) {
+            u.maxDuration = duration;
+            u.highlightContent = content;
+        }
+    });
+
+    // ========================================
+    // 2. 视图逻辑
+    // ========================================
+    let currentUser = null;
+
+    const router = {
+        history: [],
+        go(pageId) {
+            const active = document.querySelector('.page.active');
+            const next = document.getElementById(pageId);
+            if (active) {
+                active.classList.remove('active');
+                this.history.push(active.id);
+            }
+            next.classList.add('active');
+        },
+        back() {
+            if (this.history.length === 0) return;
+            const prevId = this.history.pop();
+            document.querySelector('.page.active').classList.remove('active');
+            document.getElementById(prevId).classList.add('active');
+        }
+    };
+
+    // --- 初始化：渲染用户列表 ---
+    function init() {
+        const container = document.getElementById('userListContainer');
+        Object.keys(processedData).forEach(key => {
+            const profile = userProfiles[key] || { avatar: "👤", label: "坚持者" };
+            const data = processedData[key];
+            
+            const card = document.createElement('div');
+            card.className = 'user-card';
+            card.innerHTML = `
+                <span class="u-avatar">${profile.avatar}</span>
+                <div class="u-name">${key}</div>
+                <span class="u-label">${profile.label}</span>
+                <div style="font-size:12px; color:#666; margin-top:5px;">坚持${data.days.size}天 / ${data.totalMin}分钟</div>
+            `;
+            card.onclick = () => loadUser(key);
+            container.appendChild(card);
+        });
+    }
+
+    // --- 加载特定用户数据 ---
+    function loadUser(username) {
+        currentUser = processedData[username];
+        const profile = userProfiles[username];
+
+        // Page 3: 仪表盘数据
+        document.getElementById('dashAvatar').innerText = profile.avatar;
+        document.getElementById('dashName').innerText = username;
+        document.getElementById('dashDays').innerText = currentUser.days.size;
+        
+        // 简单的连打计算 (Simplified)
+        const streak = calculateStreak(Array.from(currentUser.days));
+        document.getElementById('dashStreak').innerText = streak;
+
+        // 核心领域
+        const topType = Object.keys(currentUser.types).reduce((a, b) => currentUser.types[a] > currentUser.types[b] ? a : b);
+        document.getElementById('dashType').innerText = topType;
+        document.getElementById('dashQuote').innerText = profile.quote || "真正的改变，总是悄无声息。";
+
+        // 动画数字
+        animateValue("dashTotalTime", 0, currentUser.totalMin, 1500);
+
+        // Page 4: 时间轴渲染
+        renderTimeline(currentUser.records);
+
+        // Page 5: 海报数据
+        document.getElementById('posterAvatar').innerText = profile.avatar;
+        document.getElementById('posterName').innerText = username;
+        document.getElementById('posterKeyword').innerText = profile.label;
+        document.getElementById('posterDesc').innerText = profile.quote + `\n\n在过去的30天里，你留下了 ${currentUser.totalMin} 分钟的印记。`;
+        document.getElementById('posterTime').innerText = Math.round(currentUser.totalMin / 60 * 10) / 10;
+        document.getElementById('posterHighlight').innerText = currentUser.maxDuration + "m";
+
+        router.go('p3');
+    }
+
+    // --- 渲染时间轴 ---
+    function renderTimeline(records) {
+        const container = document.getElementById('timelineList');
+        container.innerHTML = '';
+        
+        // 按日期排序
+        records.sort((a, b) => new Date("2025-" + a.date) - new Date("2025-" + b.date));
+
+        records.forEach((rec, index) => {
+            const div = document.createElement('div');
+            div.className = 't-node';
+            div.style.animationDelay = `${index * 0.05}s`;
+            
+            const isHigh = rec.duration > 100; // 高光判定
+            const typeClass = rec.type === '运动' ? 'tag-sport' : 'tag-study';
+            
+            div.innerHTML = `
+                <div class="t-date">${rec.date}</div>
+                <div class="t-line-box">
+                    <div class="t-line"></div>
+                    <div class="t-dot" style="${isHigh ? 'background:var(--gold); box-shadow:0 0 10px var(--gold)' : ''}"></div>
+                </div>
+                <div class="t-content" style="${isHigh ? 'border:1px solid rgba(255, 214, 10, 0.3)' : ''}">
+                    ${isHigh ? '<div class="badge-high">👑</div>' : ''}
+                    <span class="t-tag ${typeClass}">${rec.type}</span>
+                    <span class="t-dur">${rec.duration}m</span>
+                    <span class="t-text">${rec.content}</span>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- 辅助函数: 连打计算 ---
+    function calculateStreak(dates) {
+        if (dates.length === 0) return 0;
+        // Parse dates as Date objects for accurate sorting and difference calculation
+        let dayNumbers = dates.map(d => {
+            const parts = d.split('-');
+            // Assuming format "MM-DD", prepend "2025-" for Date object to work
+            return new Date(`2025-${parts[0]}-${parts[1]}`).getTime(); 
+        }).sort((a, b) => a - b); // Sort by timestamp
+
+        let maxStreak = 1;
+        let currentStreak = 1;
+        for (let i = 1; i < dayNumbers.length; i++) {
+            const prevDay = new Date(dayNumbers[i-1]);
+            const currentDay = new Date(dayNumbers[i]);
+
+            // Calculate difference in days, ignoring time
+            const diffTime = Math.abs(currentDay - prevDay);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) { // Consecutive day
+                currentStreak++;
+            } else if (diffDays === 0) { // Same day, ignore
+                continue;
+            } else { // Gap in days
+                maxStreak = Math.max(maxStreak, currentStreak);
+                currentStreak = 1;
+            }
+        }
+        return Math.max(maxStreak, currentStreak);
+    }
+
+
+    // --- 辅助函数: 数字滚动动画 ---
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id);
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    // 启动
+    init();
+
+</script>
+</body>
+</html>
