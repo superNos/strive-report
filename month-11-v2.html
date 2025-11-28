@@ -549,21 +549,35 @@
     }
 
     // --- 辅助函数: 连打计算 ---
-    function calculateStreak(dates) {
-        if (dates.length === 0) return 0;
-        let dayNumbers = dates.map(d => parseInt(d.replace('2025年11月', '').replace('日', ''))).sort((a, b) => a - b);
+    function calculateStreak(dateStrings) {
+        if (!dateStrings || dateStrings.length === 0) return 0;
+
+        // 1. 将 "MM-DD" 格式转换为 2025年的时间戳
+        const timestamps = dateStrings.map(ds => {
+            const [month, day] = ds.split('-').map(Number);
+            // 注意：JS月份从0开始，所以 month-1
+            return new Date(2025, month - 1, day).getTime();
+        });
+
+        // 2. 排序 (确保日期按顺序排列)
+        timestamps.sort((a, b) => a - b);
+
+        // 3. 遍历计算
         let maxStreak = 1;
         let currentStreak = 1;
+        const oneDay = 24 * 60 * 60 * 1000; // 一天的毫秒数
 
-        if (dayNumbers.length === 0) return 0;
+        for (let i = 1; i < timestamps.length; i++) {
+            const diff = timestamps[i] - timestamps[i-1];
 
-        for (let i = 1; i < dayNumbers.length; i++) {
-            // Check for consecutive days, ignoring duplicate entries for the same day
-            if (dayNumbers[i] === dayNumbers[i-1] + 1) {
+            // 0 表示同一天有多次记录，连打保持不变，继续下一次循环
+            if (diff === 0) continue; 
+
+            // 判断差值是否接近 1 天 (允许少量误差)
+            if (Math.abs(diff - oneDay) < 10000) { 
                 currentStreak++;
-            } else if (dayNumbers[i] === dayNumbers[i-1]) {
-                // Same day, do nothing, streak continues or is maintained
             } else {
+                // 中断了
                 maxStreak = Math.max(maxStreak, currentStreak);
                 currentStreak = 1;
             }
